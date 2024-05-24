@@ -1,0 +1,27 @@
+{
+  "name": "seclevelup",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "build": "tsc",
+    "dev": "npm run build && concurrently \"tsc --watch\" \"nodemon --env-file=.env dist/index.js\"",
+    "serve": "npm run build && node dist/index.js"
+  },
+  "author": "",
+  "license": "ISC",
+  "devDependencies": {
+    "@types/express": "^4.17.21",
+    "@types/jsonwebtoken": "^9.0.6",
+    "@types/node": "^20.12.7",
+    "@types/pg": "^8.11.5",
+    "concurrently": "^8.2.2",
+    "nodemon": "^3.1.0",
+    "typescript": "^5.4.5"
+  },
+  "dependencies": {
+    "aws-sdk": "^2.1623.0",
+    "express": "^4.19.2",
+    "pg": "^8.11.5"
+  }
+}
