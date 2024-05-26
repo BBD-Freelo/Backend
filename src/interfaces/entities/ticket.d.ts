@@ -1,4 +1,4 @@
-export interface item {
+export interface Ticket {
     id: number;
     name: string;
 }

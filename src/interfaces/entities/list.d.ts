@@ -1,6 +1,6 @@
-import { item } from './item';
-export interface list {
+import { Ticket } from './ticket';
+export interface List {
     id: number;
     name: string;
-    items: item[];
+    tickets: Ticket[];
 }
