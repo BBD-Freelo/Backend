@@ -3,7 +3,7 @@ import { Controller, Get, Post } from "../decorators";
 import { controller, EndpointDefenition } from '../interfaces';
 import { DBPool } from '../database';
 
-@Controller('/api')
+@Controller('/hello')
 export class HelloController implements controller {
   // Define these to make the interface happy
   endpoint!: string;
@@ -12,7 +12,7 @@ export class HelloController implements controller {
   static endpoint = '';
   static endpoints = {}
 
-  @Get('/hello')
+  @Get('/')
   hello(req: Request, res: Response) {
     res.send('Hello, World!');
   }
