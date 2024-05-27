@@ -1,4 +1,10 @@
+import {User} from "./user";
+
 export interface Ticket {
-    id: number;
-    name: string;
+    ticketId: number;
+    user: User;
+    ticketName: string;
+    ticketDescription: string;
+    ticketCreateDate: string;
+    ticketDueDate: string;
 }
