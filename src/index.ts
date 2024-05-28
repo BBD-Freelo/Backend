@@ -4,7 +4,9 @@ import { Logger } from './logging/logger';
 import { logRequest }  from "./MiddleWare";
 import {
   BoardController,
-  HelloController
+  HelloController,
+  UserController,
+  TicketController
 } from './controllers';
 const app = express();
 app.use(express.json());
@@ -19,7 +21,9 @@ const port = 3000;
 // Register controllers here by adding controller class to array
 registerControllers(app, [
   BoardController,
-  HelloController
+  HelloController,
+  UserController,
+  TicketController
 ]);
 
 app.listen(port, () => {
