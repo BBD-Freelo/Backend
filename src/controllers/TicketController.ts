@@ -1,10 +1,12 @@
-import {Controller, Patch} from "../decorators";
+import {Controller, Patch, Post} from "../decorators";
 import {controller, EndpointDefenition, ErrorResponse, MyBoards, SuccesResponse} from "../interfaces";
 import {Request, Response} from "express";
 import {DBPool} from "../database";
 import {AssignTicketRequest} from "../interfaces/Requests/assignTicket";
 import {QueryResult} from "pg";
 import {MoveTicketRequest} from "../interfaces/Requests/moveTicket";
+import {AddTicketResponse} from "../interfaces/Responses/addTicket";
+import {AddTicketRequest} from "../interfaces/Requests/addTicket";
 
 @Controller('/ticket')
 export class TicketController implements controller {
@@ -108,5 +110,36 @@ export class TicketController implements controller {
             message: "List successfully updated",
             code: 200
         });
+    }
+
+    @Post('/add')
+    async addTicket(req: Request<AddTicketRequest>, res: Response<AddTicketResponse | ErrorResponse>) {
+        const userId = 3;
+        const { listId, ticketName } = req.body;
+        const { rows }: QueryResult<AddTicketResponse> = await DBPool.query(`
+            WITH authorized_user AS (
+                SELECT 1
+                FROM "Boards" b
+                JOIN "Lists" l ON b."boardId" = l."boardId"
+                WHERE l."listId" = $1
+                  AND (b."userId" = $2 OR $2 = ANY(b."boardCollaborators"))
+                  AND b."isDeleted" = FALSE
+                  AND l."isDeleted" = FALSE
+            )
+            INSERT INTO "Tickets" (
+                "userId", "listId", "ticketName", "ticketDescription", "ticketCreateDate", "ticketUpdateDate"
+            )
+            SELECT $2, $1, $3, '', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP
+            FROM authorized_user
+            RETURNING "ticketId", "listId", "ticketName", "ticketDescription", "ticketCreateDate", "ticketUpdateDate", "ticketDueDate";
+        `, [listId, userId, ticketName]);
+        if (rows.length > 0) {
+            res.send(rows[0]);
+        } else {
+            res.status(404).json({
+                message: "List not found",
+                code: 404
+            });
+        }
     }
 }

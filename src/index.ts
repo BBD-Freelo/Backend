@@ -5,6 +5,7 @@ import { logRequest }  from "./MiddleWare";
 import {
   BoardController,
   HelloController,
+  ListController,
   UserController,
   TicketController
 } from './controllers';
@@ -22,6 +23,7 @@ const port = 3000;
 registerControllers(app, [
   BoardController,
   HelloController,
+  ListController,
   UserController,
   TicketController
 ]);
