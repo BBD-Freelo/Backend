@@ -4,6 +4,7 @@ import {Board, controller, EndpointDefenition, ErrorResponse, MyBoards} from '..
 import { List } from "../interfaces/entities";
 import { DBPool } from '../database';
 import {QueryResult} from "pg";
+import {AddBoardRequest} from "../interfaces/Requests/addBoard";
 
 interface wrapper {
     board_data: Board
@@ -102,6 +103,28 @@ export class BoardController implements controller {
                 AND b."isDeleted" = FALSE;
         `, [userId]);
         res.send(rows);
+    }
+
+    @Post('/new')
+    async createBoard(req: Request<AddBoardRequest>, res: Response<MyBoards | ErrorResponse>) {
+        const userId = 3;
+        const { boardCollaborators, boardName, isPublic } = req.body;
+        // Will have to grab the users ids based off of their emails
+        const { rows }: QueryResult<MyBoards> = await DBPool.query(`
+            INSERT INTO "Boards" (
+                "userId", "boardCollaborators", "boardName", "isPublic"
+            )
+            VALUES ($1, $2::INTEGER[], $3, $4)
+            RETURNING "boardId", "boardName";
+        `, [userId, boardCollaborators, boardName, isPublic]);
+        if (rows.length > 0) {
+            res.status(201).send(rows[0]);
+        } else {
+            res.status(500).send({
+                message: "Error creating board",
+                code: 500
+            });
+        }
     }
 
 }
