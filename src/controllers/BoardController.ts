@@ -1,6 +1,6 @@
 import { Request, Response } from 'express';
 import { Controller, Get, Post } from "../decorators";
-import {Board, controller, EndpointDefenition, ErrorResponse} from '../interfaces';
+import {Board, controller, EndpointDefenition, ErrorResponse, MyBoards} from '../interfaces';
 import { List } from "../interfaces/entities";
 import { DBPool } from '../database';
 import {QueryResult} from "pg";
@@ -18,9 +18,8 @@ export class BoardController implements controller {
     static endpoint = '';
     static endpoints = {}
 
-    // Or id?
     @Get('/:boardId')
-    async hello(req: Request, res: Response<Board | ErrorResponse>) {
+    async getBoardData(req: Request, res: Response<Board | ErrorResponse>) {
         const { boardId } = req.params;
         // Grab this from the jwt in the header
         const userId = 3;
@@ -88,16 +87,21 @@ export class BoardController implements controller {
         res.send(rows[0].board_data);
     }
 
-    @Get('/user/:id')
-    test(req: Request, res: Response) {
-        const { id } = req.params;
-        res.send(`User ID: ${id}`);
-    }
-
-    @Post('/echo')
-    echo(req: Request, res: Response) {
-        const { message } = req.body;
-        res.send(`You said: hey`);
+    @Get('/')
+    async userBoard(req:Request, res:Response<MyBoards[]>) {
+        const userId = 3;
+        const { rows }: QueryResult<MyBoards> = await DBPool.query(`
+            SELECT
+                b."boardId",
+                b."boardName"
+            FROM
+                "Boards" b
+                    JOIN "Users" u ON b."userId" = u."userId"
+            WHERE
+                b."userId" = $1 OR $1 = ANY(b."boardCollaborators")
+                AND b."isDeleted" = FALSE;
+        `, [userId]);
+        res.send(rows);
     }
 
 }

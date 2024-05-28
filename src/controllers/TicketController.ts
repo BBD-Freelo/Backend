@@ -15,7 +15,7 @@ export class TicketController implements controller {
 
     @Patch('/assign/user/:ticketId')
     async assignUser(req: Request<AssignTicketRequest>, res: Response<SuccesResponse| ErrorResponse>) {
-        const userId = 2;
+        const userId = 3;
         const { ticketId } = req.params;
         const { assigneeId } = req.body;
         const { rows } = await DBPool.query(`
