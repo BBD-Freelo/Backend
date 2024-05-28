@@ -22,7 +22,6 @@ export class BoardController implements controller {
     @Get('/:boardId')
     async hello(req: Request, res: Response<List[] | ErrorResponse>) {
         const { boardId } = req.params;
-        console.log(boardId);
         // Grab this from the jwt in the header
         const userId = 3
         const { rows }: QueryResult<temp> = await DBPool.query(`
@@ -39,7 +38,17 @@ export class BoardController implements controller {
                                                                       'user', json_build_object(
                                                                               'userId', u."userId",
                                                                               'userProfilePicture', u."userProfilePicture"
-                                                                        ),
+                                                                              ),
+                                                                      'assignedUser', COALESCE(
+                                                                              (
+                                                                                  SELECT json_build_object(
+                                                                                                 'userId', au."userId",
+                                                                                                 'userProfilePicture', au."userProfilePicture"
+                                                                                         )
+                                                                                  FROM "Users" au
+                                                                                  WHERE au."userId" = t."assignedUser"
+                                                                              ), NULL
+                                                                                      ),
                                                                       'ticketName', t."ticketName",
                                                                       'ticketDescription', t."ticketDescription",
                                                                       'ticketCreateDate', t."ticketCreateDate",
@@ -48,8 +57,8 @@ export class BoardController implements controller {
                                                        FROM "Tickets" t
                                                                 JOIN "Users" u ON t."userId" = u."userId"
                                                        WHERE t."listId" = l."listId" AND t."isDeleted" = FALSE
-                                               )
-                                )
+                                                          )
+                                       )
                                 FROM "Lists" l
                                 WHERE l."boardId" = b."boardId" AND l."isDeleted" = FALSE
                                 GROUP BY l."listId", l."listName"
