@@ -17,8 +17,9 @@ export class UserController implements controller {
     static endpoint = '';
     static endpoints = {}
 
+    ///board/:boardId already does this but maybe we need this??
     @Get('/collaborators/:boardId')
-    async hello(req: Request, res: Response<User[] | ErrorResponse>) {
+    async Collaborators(req: Request, res: Response<User[] | ErrorResponse>) {
         const { boardId } = req.params;
         const userId = 3; // Grab this from the jwt in the header
         const { rows }: QueryResult<wrapper> = await DBPool.query(`
