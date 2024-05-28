@@ -1,6 +1,6 @@
 import { Request, Response } from 'express';
 import { Controller, Get, Post } from "../decorators";
-import {Board, controller, EndpointDefenition, ErrorResponse} from '../interfaces';
+import {Board, controller, EndpointDefenition, ErrorResponse, MyBoards} from '../interfaces';
 import { List } from "../interfaces/entities";
 import { DBPool } from '../database';
 import {QueryResult} from "pg";
@@ -88,9 +88,9 @@ export class BoardController implements controller {
     }
 
     @Get('/')
-    async userBoard(req:Request, res:Response) {
+    async userBoard(req:Request, res:Response<MyBoards[]>) {
         const userId = 3;
-        const { rows } = await DBPool.query(`
+        const { rows }: QueryResult<MyBoards> = await DBPool.query(`
             SELECT
                 b."boardId",
                 b."boardName"
