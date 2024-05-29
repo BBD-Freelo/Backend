@@ -10,15 +10,15 @@ on:
 
 jobs:
   build:
-    runs-on: ec2-host
+    runs-on: ubunutu-latest
     steps:
       - uses: actions/checkout@v4
       - name: Login to dockerhub
-        run: sudo docker login -u ${{secrets.DOCKER_USERNAME}} -p ${{secrets.DOCKER_PASSWORD}}
+        run: docker login -u ${{secrets.DOCKER_USERNAME}} -p ${{secrets.DOCKER_PASSWORD}}
       - name: Build Docker image
         run: |
-          sudo docker build -t ${{secrets.DOCKER_USERNAME}}/freelo .
-          sudo docker push ${{secrets.DOCKER_USERNAME}}/freelo:latest
+          docker build -t ${{secrets.DOCKER_USERNAME}}/freelo .
+          docker push ${{secrets.DOCKER_USERNAME}}/freelo:latest
   deploy:
     needs: build
     runs-on: ec2-host
@@ -30,4 +30,4 @@ jobs:
       - name: Delete old container
         run: sudo docker rm -f freelo-container
       - name: Run container
-        run: sudo docker run -d -v "/etc/letsencrypt/live/freeloooo.duckdns.org:/app/ssl" -e HOST_URL=${{secrets.HOST_URL}} -e DB_CONNECTION_STRING=${{secrets.DB_CONNECTION_STRING}} -p 443:3000 --name freelo-container ${{secrets.DOCKER_USERNAME}}/freelo:latest
+        run: sudo docker run -d -e HOST_URL=${{secrets.HOST_URL}} -e DB_CONNECTION_STRING=${{secrets.DB_CONNECTION_STRING}} -p 80:3000 --name freelo-container ${{secrets.DOCKER_USERNAME}}/freelo:latest
