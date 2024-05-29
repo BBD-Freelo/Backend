@@ -61,7 +61,6 @@ export class TicketController implements controller {
     async moveTicket(req: Request<MoveTicketRequest>, res: Response<SuccesResponse| ErrorResponse>) {
         const { moveToListId, ticketId } = req.body;
         const userId = 3;
-        console.log(req.body);
         const { rows } = await DBPool.query(`
             WITH updated_tickets AS (
                 WITH cte AS (
