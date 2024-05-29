@@ -2,6 +2,9 @@ import express from 'express';
 import { registerControllers } from './server';
 import { Logger } from './logging/logger';
 import { logRequest }  from "./MiddleWare";
+import fs from 'fs';
+import path from "node:path";
+import https from 'https';
 import {
   BoardController,
   HelloController,
@@ -19,7 +22,7 @@ app.use((req, res, next) => {
 });
 app.use(logRequest);
 const port = 3000;
-// Register controllers here by adding controller class to array
+
 registerControllers(app, [
   BoardController,
   HelloController,
@@ -28,6 +31,20 @@ registerControllers(app, [
   TicketController
 ]);
 
-app.listen(port, () => {
-  Logger.info(`Server is running on http://localhost:${port}`);
-});
+if(process.env.MODE !== 'dev') {
+  Logger.debug("Starting server in production mode");
+  const privateKey = fs.readFileSync(path.join(__dirname, '../ssl/privkey.pem'), 'utf8');
+  const certificate = fs.readFileSync(path.join(__dirname, '../ssl/fullchain.pem'), 'utf8');
+  const credentials = { key: privateKey, cert: certificate };
+  const httpsServer = https.createServer(credentials, app);
+
+  httpsServer.listen(port, () => {
+    Logger.info(`Server is running on http://localhost:${port}`);
+  });
+}
+else {
+    app.listen(port, () => {
+
+        Logger.info(`Server is running on http://localhost:${port}`);
+    });
+}
