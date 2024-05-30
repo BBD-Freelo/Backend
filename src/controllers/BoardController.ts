@@ -1,5 +1,5 @@
 import { Request, Response } from 'express';
-import { Controller, Get, Post } from "../decorators";
+import {Controller, Delete, Get, Post} from "../decorators";
 import {Board, controller, EndpointDefenition, ErrorResponse, MyBoards} from '../interfaces';
 import { List } from "../interfaces/entities";
 import { DBPool } from '../database';
@@ -124,6 +124,44 @@ export class BoardController implements controller {
                 message: "Error creating board",
                 code: 500
             });
+        }
+    }
+
+    @Delete('/:boardId')
+    async deleteBoard(req: Request, res: Response) {
+        const { boardId } = req.params;
+        // const userId = req.user.id;
+        const userId =3;
+        const { rows } = await DBPool.query(`
+            WITH authorized_user AS (
+                SELECT 1
+                FROM "Boards" b
+                WHERE b."boardId" = $1
+                  AND (b."userId" = $2 OR $2 = ANY(b."boardCollaborators"))
+                  AND b."isDeleted" = FALSE
+            )
+            , delete_tickets AS (
+                DELETE FROM "Tickets" t
+                USING "Lists" l
+                WHERE t."listId" = l."listId"
+                  AND l."boardId" = $1
+                  AND EXISTS (SELECT 1 FROM authorized_user)
+            )
+            , delete_lists AS (
+                DELETE FROM "Lists"
+                WHERE "boardId" = $1
+                  AND EXISTS (SELECT 1 FROM authorized_user)
+            )
+            DELETE FROM "Boards"
+            WHERE "boardId" = $1
+              AND EXISTS (SELECT 1 FROM authorized_user)
+            RETURNING "boardId";
+        `, [boardId, userId]);
+
+        if (rows.length > 0) {
+            res.send({ success: true, boardId: rows[0].boardId });
+        } else {
+            res.status(404).json({ error: 'Board not found' });
         }
     }
 
