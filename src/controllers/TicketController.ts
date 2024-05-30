@@ -1,4 +1,4 @@
-import {Controller, Patch, Post} from "../decorators";
+import {Controller, Delete, Patch, Post} from "../decorators";
 import {controller, EndpointDefenition, ErrorResponse, MyBoards, SuccesResponse} from "../interfaces";
 import {Request, Response} from "express";
 import {DBPool} from "../database";
@@ -141,4 +141,36 @@ export class TicketController implements controller {
             });
         }
     }
+
+    @Delete('/:ticketId')
+    async deleteTicket(req: Request, res: Response) {
+        const { ticketId } = req.params;
+        const userId = 3;  // Assuming userId is available in req.user
+
+        const { rows } = await DBPool.query(`
+            WITH authorized_user AS (
+                SELECT 1
+                FROM "Boards" b
+                JOIN "Lists" l ON b."boardId" = l."boardId"
+                JOIN "Tickets" t ON l."listId" = t."listId"
+                WHERE t."ticketId" = $1
+                  AND (b."userId" = $2 OR $2 = ANY(b."boardCollaborators"))
+                  AND b."isDeleted" = FALSE
+                  AND l."isDeleted" = FALSE
+                  AND t."isDeleted" = FALSE
+            )
+            DELETE FROM "Tickets"
+            WHERE "ticketId" = $1
+              AND EXISTS (SELECT 1 FROM authorized_user)
+            RETURNING "ticketId";
+        `, [ticketId, userId]);
+
+        if (rows.length > 0) {
+            res.send({ success: true, ticketId: rows[0].ticketId });
+        } else {
+            res.status(404).send({ error: 'Ticket not found' });
+        }
+
+    }
+
 }
