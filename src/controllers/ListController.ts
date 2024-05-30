@@ -1,10 +1,11 @@
 import { Request, Response } from 'express';
-import {Controller, Delete, Get, Post} from "../decorators";
+import {Controller, Delete, Get, Patch, Post} from "../decorators";
 import {controller, EndpointDefenition, ErrorResponse} from '../interfaces';
 import { DBPool } from '../database';
 import {AddListRequest} from "../interfaces/Requests/addList";
 import {AddListResponse} from "../interfaces/Responses/addList";
 import {QueryResult} from "pg";
+import {EditListRequest} from "../interfaces/Requests/editList";
 
 @Controller('/list')
 export class ListController implements controller {
@@ -72,6 +73,36 @@ export class ListController implements controller {
 
         if (rows.length > 0) {
             res.send({ success: true, listId: rows[0].listId });
+        } else {
+            res.status(404).send({ error: 'List not found' });
+        }
+    }
+
+    @Patch('/edit-list')
+    async editList(req: Request<EditListRequest>, res: Response) {
+        const { listId, listName }: EditListRequest = req.body;
+        const userId = 3;  // Assuming userId is available in req.user
+
+        const { rows } = await DBPool.query(`
+            WITH authorized_user AS (
+                SELECT 1
+                FROM "Boards" b
+                JOIN "Lists" l ON b."boardId" = l."boardId"
+                WHERE l."listId" = $1
+                  AND (b."userId" = $3 OR $3 = ANY(b."boardCollaborators"))
+                  AND b."isDeleted" = FALSE
+                  AND l."isDeleted" = FALSE
+            )
+            UPDATE "Lists"
+            SET "listName" = COALESCE($2, "listName")
+            WHERE "listId" = $1
+              AND EXISTS (SELECT 1 FROM authorized_user)
+            RETURNING "listId", "boardId", "listName", "listCreateDate";
+        `, [listId, listName, userId]);
+
+        if (rows.length > 0) {
+            const list = rows[0];
+            res.send(list);
         } else {
             res.status(404).send({ error: 'List not found' });
         }
