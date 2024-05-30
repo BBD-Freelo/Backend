@@ -7,6 +7,7 @@ import {QueryResult} from "pg";
 import {MoveTicketRequest} from "../interfaces/Requests/moveTicket";
 import {AddTicketResponse} from "../interfaces/Responses/addTicket";
 import {AddTicketRequest} from "../interfaces/Requests/addTicket";
+import {EditTicketRequest} from "../interfaces/Requests/editTicket";
 
 @Controller('/ticket')
 export class TicketController implements controller {
@@ -173,4 +174,40 @@ export class TicketController implements controller {
 
     }
 
+    @Patch('/')
+    async editTicket(req: Request<EditTicketRequest>, res: Response) {
+        const { ticketId, ticketName, ticketDescription, assignedUser, ticketDueDate }: EditTicketRequest = req.body;
+        const userId = 3;
+
+        const { rows } = await DBPool.query(`
+            WITH authorized_user AS (
+                SELECT 1
+                FROM "Boards" b
+                JOIN "Lists" l ON b."boardId" = l."boardId"
+                JOIN "Tickets" t ON l."listId" = t."listId"
+                WHERE t."ticketId" = $1
+                  AND (b."userId" = $5 OR $5 = ANY(b."boardCollaborators"))
+                  AND b."isDeleted" = FALSE
+                  AND l."isDeleted" = FALSE
+                  AND t."isDeleted" = FALSE
+            )
+            UPDATE "Tickets"
+            SET "ticketName" = COALESCE($2, "ticketName"),
+                "ticketDescription" = COALESCE($3, "ticketDescription"),
+                "assignedUser" = COALESCE($4, "assignedUser"),
+                "ticketDueDate" = COALESCE($6::TIMESTAMP, "ticketDueDate"),
+                "ticketUpdateDate" = CURRENT_TIMESTAMP
+            WHERE "ticketId" = $1
+              AND EXISTS (SELECT 1 FROM authorized_user)
+            RETURNING "ticketId", "userId", "listId", "ticketName", "ticketDescription", "ticketCreateDate", "ticketDueDate", "assignedUser";
+        `, [ticketId, ticketName, ticketDescription, assignedUser, userId, ticketDueDate]);
+
+        if (rows.length > 0) {
+            const ticket = rows[0];
+            res.send(ticket);
+        } else {
+            res.status(404).send({ error: 'ticket not found' });
+        }
+
+    }
 }

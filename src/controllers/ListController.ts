@@ -78,7 +78,7 @@ export class ListController implements controller {
         }
     }
 
-    @Patch('/edit-list')
+    @Patch('/')
     async editList(req: Request<EditListRequest>, res: Response) {
         const { listId, listName }: EditListRequest = req.body;
         const userId = 3;  // Assuming userId is available in req.user
