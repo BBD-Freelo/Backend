@@ -6,6 +6,7 @@ import { DBPool } from '../database';
 import {QueryResult} from "pg";
 import {AddBoardRequest} from "../interfaces/Requests/addBoard";
 import {EditBoardRequest} from "../interfaces/Requests/editBoard";
+import {DeleteResponse} from "../interfaces/Responses/delete";
 
 interface wrapper {
     board_data: Board
@@ -128,8 +129,8 @@ export class BoardController implements controller {
         }
     }
 
-    @Delete('/:boardId')
-    async deleteBoard(req: Request, res: Response) {
+    @Delete('/remove/:boardId')
+    async deleteBoard(req: Request, res: Response<DeleteResponse>) {
         const { boardId } = req.params;
         // const userId = req.user.id;
         const userId =3;
@@ -162,11 +163,11 @@ export class BoardController implements controller {
         if (rows.length > 0) {
             res.send({ success: true, boardId: rows[0].boardId });
         } else {
-            res.status(404).json({ error: 'Board not found' });
+            res.status(404).json({ success: false });
         }
     }
 
-    @Patch('/')
+    @Patch('/edit')
     async editBoard(req: Request<EditBoardRequest>, res: Response) {
         const { boardId, boardName, isPublic, boardCollaborators }: EditBoardRequest = req.body;
         const userId = 3;  // Assuming userId is available in req.user

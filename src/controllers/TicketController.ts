@@ -8,6 +8,7 @@ import {MoveTicketRequest} from "../interfaces/Requests/moveTicket";
 import {AddTicketResponse} from "../interfaces/Responses/addTicket";
 import {AddTicketRequest} from "../interfaces/Requests/addTicket";
 import {EditTicketRequest} from "../interfaces/Requests/editTicket";
+import {DeleteResponse} from "../interfaces/Responses/delete";
 
 @Controller('/ticket')
 export class TicketController implements controller {
@@ -144,7 +145,7 @@ export class TicketController implements controller {
     }
 
     @Delete('/:ticketId')
-    async deleteTicket(req: Request, res: Response) {
+    async deleteTicket(req: Request, res: Response<DeleteResponse>) {
         const { ticketId } = req.params;
         const userId = 3;  // Assuming userId is available in req.user
 
@@ -169,7 +170,7 @@ export class TicketController implements controller {
         if (rows.length > 0) {
             res.send({ success: true, ticketId: rows[0].ticketId });
         } else {
-            res.status(404).send({ error: 'Ticket not found' });
+            res.status(404).send({success: false});
         }
 
     }

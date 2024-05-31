@@ -6,6 +6,7 @@ import {AddListRequest} from "../interfaces/Requests/addList";
 import {AddListResponse} from "../interfaces/Responses/addList";
 import {QueryResult} from "pg";
 import {EditListRequest} from "../interfaces/Requests/editList";
+import {DeleteResponse} from "../interfaces/Responses/delete";
 
 @Controller('/list')
 export class ListController implements controller {
@@ -47,7 +48,7 @@ export class ListController implements controller {
     }
 
     @Delete('/:listId')
-    async deleteList(req: Request, res: Response) {
+    async deleteList(req: Request, res: Response<DeleteResponse>) {
         const { listId } = req.params;
         const userId = 3;
         const { rows } = await DBPool.query(`
@@ -74,7 +75,7 @@ export class ListController implements controller {
         if (rows.length > 0) {
             res.send({ success: true, listId: rows[0].listId });
         } else {
-            res.status(404).send({ error: 'List not found' });
+            res.status(404).send({ success: false });
         }
     }
 
