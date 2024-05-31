@@ -7,6 +7,7 @@ import {QueryResult} from "pg";
 import {AddBoardRequest} from "../interfaces/Requests/addBoard";
 import {EditBoardRequest} from "../interfaces/Requests/editBoard";
 import {DeleteResponse} from "../interfaces/Responses/delete";
+import {EditBoardResponse} from "../interfaces/Responses/editBoard.";
 
 interface wrapper {
     board_data: Board
@@ -170,31 +171,63 @@ export class BoardController implements controller {
     }
 
     @Patch('/edit')
-    async editBoard(req: Request<EditBoardRequest>, res: Response) {
+    async editBoard(req: Request<EditBoardRequest>, res: Response<EditBoardResponse | ErrorResponse>) {
         const { boardId, boardName, isPublic, boardCollaborators }: EditBoardRequest = req.body;
-        const userId = 3;  // Assuming userId is available in req.user
-        const { rows } = await DBPool.query(`
+        const userId = 3;
+        const { rows }: QueryResult<EditBoardResponse> = await DBPool.query(`
             WITH authorized_user AS (
                 SELECT 1
                 FROM "Boards" b
                 WHERE b."boardId" = $1
                   AND (b."userId" = $4 OR $4 = ANY(b."boardCollaborators"))
                   AND b."isDeleted" = FALSE
+            ), new_collaborators AS (
+                SELECT ARRAY_AGG("userId") AS new_ids
+                FROM "Users"
+                WHERE "email" = ANY($5::TEXT[])
+                  AND "isDeleted" = FALSE
+            ), updated_board AS (
+                UPDATE "Boards"
+                    SET "boardName" = COALESCE($2, "boardName"),
+                        "isPublic" = COALESCE($3, "isPublic"),
+                        "boardCollaborators" = (
+                            SELECT ARRAY(SELECT DISTINCT UNNEST(
+                                                                 ARRAY_APPEND(
+                                                                         ARRAY_APPEND(
+                                                                                 ARRAY(SELECT UNNEST("boardCollaborators") FROM "Boards" WHERE "boardId" = $1),
+                                                                                 UNNEST((SELECT new_ids FROM new_collaborators))
+                                                                         ),
+                                                                         "userId"
+                                                                 )
+                                                         ))
+                        )
+                    WHERE "boardId" = $1
+                        AND EXISTS (SELECT 1 FROM authorized_user)
+                    RETURNING "boardId", "userId", "boardName", "isPublic", "boardCollaborators"
             )
-            UPDATE "Boards"
-            SET "boardName" = COALESCE($2, "boardName"),
-                "isPublic" = COALESCE($3, "isPublic"),
-                "boardCollaborators" = COALESCE($5::INTEGER[], "boardCollaborators")
-            WHERE "boardId" = $1
-              AND EXISTS (SELECT 1 FROM authorized_user)
-            RETURNING "boardId", "userId", "boardName", "isPublic", "boardCollaborators";
+            SELECT
+                ub."boardId",
+                ub."userId",
+                ub."boardName",
+                ub."isPublic",
+                json_agg(json_build_object(
+                        'userId', u."userId",
+                        'userProfilePicture', u."userProfilePicture",
+                        'email', u."email"
+                         )) AS "boardCollaborators"
+            FROM updated_board ub
+                     JOIN "Users" u ON u."userId" = ANY(ub."boardCollaborators")
+            GROUP BY ub."boardId", ub."userId", ub."boardName", ub."isPublic";
         `, [boardId, boardName, isPublic, userId, boardCollaborators]);
 
         if (rows.length > 0) {
             const board = rows[0];
             res.send(board);
         } else {
-            res.status(404).send({ error: 'Board not found' });
+            res.status(404).send({
+                message: "board not found",
+                code: 404
+            });
         }
     }
 
