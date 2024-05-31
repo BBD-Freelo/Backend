@@ -32,7 +32,7 @@ export class BoardController implements controller {
                     WHEN (b."isPublic" = TRUE OR b."userId" = $2 OR $2 = ANY(b."boardCollaborators")) THEN
                         json_build_object(
                                 'collaborators', (
-                            SELECT json_agg(json_build_object('userId', u."userId", 'userProfilePicture', u."userProfilePicture"))
+                            SELECT json_agg(json_build_object('userId', u."userId", 'userProfilePicture', u."userProfilePicture", 'email', u."email"))
                             FROM "Users" u
                             WHERE u."userId" IN (
                                     (SELECT b."userId")
@@ -49,13 +49,15 @@ export class BoardController implements controller {
                                                                               'ticketId', t."ticketId",
                                                                               'user', json_build_object(
                                                                                       'userId', u."userId",
-                                                                                      'userProfilePicture', u."userProfilePicture"
+                                                                                      'userProfilePicture', u."userProfilePicture",
+                                                                                      'email', u."email"
                                                                                       ),
                                                                               'assignedUser', COALESCE(
                                                                                       (
                                                                                           SELECT json_build_object(
                                                                                                          'userId', au."userId",
-                                                                                                         'userProfilePicture', au."userProfilePicture"
+                                                                                                         'userProfilePicture', au."userProfilePicture",
+                                                                                                         'email', au."email"
                                                                                                  )
                                                                                           FROM "Users" au
                                                                                           WHERE au."userId" = t."assignedUser"
