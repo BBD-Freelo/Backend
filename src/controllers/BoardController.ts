@@ -114,16 +114,19 @@ export class BoardController implements controller {
     async createBoard(req: Request<AddBoardRequest>, res: Response<MyBoards | ErrorResponse>) {
         const userId = 3;
         const { boardCollaborators, boardName, isPublic } = req.body;
-        // Will have to grab the users ids based off of their emails
-        const { rows }: QueryResult<MyBoards> = await DBPool.query(`
-            INSERT INTO "Boards" (
-                "userId", "boardCollaborators", "boardName", "isPublic"
+
+        const { rows } = await DBPool.query(`
+            WITH collaborator_ids AS (
+                SELECT "userId" FROM "Users" WHERE "email" = ANY($1::TEXT[])
+            ), inserted_board AS (
+                INSERT INTO "Boards" ("userId", "boardCollaborators", "boardName", "isPublic")
+                    VALUES ($2, (SELECT ARRAY_AGG("userId") FROM collaborator_ids), $3, $4)
+                    RETURNING "boardId", "boardName"
             )
-            VALUES ($1, $2::INTEGER[], $3, $4)
-            RETURNING "boardId", "boardName";
-        `, [userId, boardCollaborators, boardName, isPublic]);
+            SELECT * FROM inserted_board;
+        `, [boardCollaborators, userId, boardName, isPublic]);
         if (rows.length > 0) {
-            res.status(201).send(rows[0]);
+            res.send(rows[0]);
         } else {
             res.status(500).send({
                 message: "Error creating board",
