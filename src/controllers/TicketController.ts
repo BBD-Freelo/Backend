@@ -9,6 +9,7 @@ import {AddTicketResponse} from "../interfaces/Responses/addTicket";
 import {AddTicketRequest} from "../interfaces/Requests/addTicket";
 import {EditTicketRequest} from "../interfaces/Requests/editTicket";
 import {DeleteResponse} from "../interfaces/Responses/delete";
+import {Ticket} from "../interfaces/entities/ticket";
 
 @Controller('/ticket')
 export class TicketController implements controller {
@@ -176,7 +177,7 @@ export class TicketController implements controller {
     }
 
     @Patch('/')
-    async editTicket(req: Request<EditTicketRequest>, res: Response) {
+    async editTicket(req: Request<EditTicketRequest>, res: Response<Ticket | ErrorResponse>) {
         const { ticketId, ticketName, ticketDescription, assignedUser, ticketDueDate }: EditTicketRequest = req.body;
         const userId = 3;
 
@@ -184,30 +185,61 @@ export class TicketController implements controller {
             WITH authorized_user AS (
                 SELECT 1
                 FROM "Boards" b
-                JOIN "Lists" l ON b."boardId" = l."boardId"
-                JOIN "Tickets" t ON l."listId" = t."listId"
+                         JOIN "Lists" l ON b."boardId" = l."boardId"
+                         JOIN "Tickets" t ON l."listId" = t."listId"
                 WHERE t."ticketId" = $1
                   AND (b."userId" = $5 OR $5 = ANY(b."boardCollaborators"))
                   AND b."isDeleted" = FALSE
                   AND l."isDeleted" = FALSE
                   AND t."isDeleted" = FALSE
+            ), assigned_user AS (
+                SELECT "userId"
+                FROM "Users"
+                WHERE "email" = $4
+                  AND "isDeleted" = FALSE
+            ), updated_ticket AS (
+                UPDATE "Tickets"
+                    SET "ticketName" = $2,
+                        "ticketDescription" = $3,
+                        "assignedUser" = (SELECT "userId" FROM assigned_user),
+                        "ticketDueDate" = $6::TIMESTAMP,
+                        "ticketUpdateDate" = CURRENT_TIMESTAMP
+                    WHERE "ticketId" = $1
+                        AND EXISTS (SELECT 1 FROM authorized_user)
+                        AND EXISTS (SELECT 1 FROM assigned_user)
+                    RETURNING "ticketId", "userId", "listId", "ticketName", "ticketDescription", "ticketCreateDate", "ticketDueDate", "assignedUser"
             )
-            UPDATE "Tickets"
-            SET "ticketName" = COALESCE($2, "ticketName"),
-                "ticketDescription" = COALESCE($3, "ticketDescription"),
-                "assignedUser" = COALESCE($4, "assignedUser"),
-                "ticketDueDate" = COALESCE($6::TIMESTAMP, "ticketDueDate"),
-                "ticketUpdateDate" = CURRENT_TIMESTAMP
-            WHERE "ticketId" = $1
-              AND EXISTS (SELECT 1 FROM authorized_user)
-            RETURNING "ticketId", "userId", "listId", "ticketName", "ticketDescription", "ticketCreateDate", "ticketDueDate", "assignedUser";
+            SELECT
+                t."ticketId",
+                json_build_object(
+                        'userId', u."userId",
+                        'userProfilePicture', u."userProfilePicture",
+                        'email', u."email"
+                ) AS "user",
+                json_build_object(
+                        'userId', au."userId",
+                        'userProfilePicture', au."userProfilePicture",
+                        'email', au."email"
+                ) AS "assignedUser",
+                t."ticketName",
+                t."ticketDescription",
+                t."ticketCreateDate",
+                t."ticketDueDate"
+            FROM updated_ticket t
+                     JOIN "Users" u ON t."userId" = u."userId"
+                     JOIN "Users" au ON t."assignedUser" = au."userId";
         `, [ticketId, ticketName, ticketDescription, assignedUser, userId, ticketDueDate]);
+
+
 
         if (rows.length > 0) {
             const ticket = rows[0];
             res.send(ticket);
         } else {
-            res.status(404).send({ error: 'ticket not found' });
+            res.status(404).send({
+                message: "Ticket not found",
+                code: 404
+            });
         }
 
     }
