@@ -1,10 +1,13 @@
 import { Request, Response } from 'express';
-import { Controller, Get, Post } from "../decorators";
+import {Controller, Delete, Get, Patch, Post} from "../decorators";
 import {Board, controller, EndpointDefenition, ErrorResponse, MyBoards} from '../interfaces';
 import { List } from "../interfaces/entities";
 import { DBPool } from '../database';
 import {QueryResult} from "pg";
 import {AddBoardRequest} from "../interfaces/Requests/addBoard";
+import {EditBoardRequest} from "../interfaces/Requests/editBoard";
+import {DeleteResponse} from "../interfaces/Responses/delete";
+import {EditBoardResponse} from "../interfaces/Responses/editBoard.";
 
 interface wrapper {
     board_data: Board
@@ -30,7 +33,7 @@ export class BoardController implements controller {
                     WHEN (b."isPublic" = TRUE OR b."userId" = $2 OR $2 = ANY(b."boardCollaborators")) THEN
                         json_build_object(
                                 'collaborators', (
-                            SELECT json_agg(json_build_object('userId', u."userId", 'userProfilePicture', u."userProfilePicture"))
+                            SELECT json_agg(json_build_object('userId', u."userId", 'userProfilePicture', u."userProfilePicture", 'email', u."email"))
                             FROM "Users" u
                             WHERE u."userId" IN (
                                     (SELECT b."userId")
@@ -47,13 +50,15 @@ export class BoardController implements controller {
                                                                               'ticketId', t."ticketId",
                                                                               'user', json_build_object(
                                                                                       'userId', u."userId",
-                                                                                      'userProfilePicture', u."userProfilePicture"
+                                                                                      'userProfilePicture', u."userProfilePicture",
+                                                                                      'email', u."email"
                                                                                       ),
                                                                               'assignedUser', COALESCE(
                                                                                       (
                                                                                           SELECT json_build_object(
                                                                                                          'userId', au."userId",
-                                                                                                         'userProfilePicture', au."userProfilePicture"
+                                                                                                         'userProfilePicture', au."userProfilePicture",
+                                                                                                         'email', au."email"
                                                                                                  )
                                                                                           FROM "Users" au
                                                                                           WHERE au."userId" = t."assignedUser"
@@ -109,20 +114,122 @@ export class BoardController implements controller {
     async createBoard(req: Request<AddBoardRequest>, res: Response<MyBoards | ErrorResponse>) {
         const userId = 3;
         const { boardCollaborators, boardName, isPublic } = req.body;
-        // Will have to grab the users ids based off of their emails
-        const { rows }: QueryResult<MyBoards> = await DBPool.query(`
-            INSERT INTO "Boards" (
-                "userId", "boardCollaborators", "boardName", "isPublic"
+
+        const { rows } = await DBPool.query(`
+            WITH collaborator_ids AS (
+                SELECT "userId" FROM "Users" WHERE "email" = ANY($1::TEXT[])
+            ), inserted_board AS (
+                INSERT INTO "Boards" ("userId", "boardCollaborators", "boardName", "isPublic")
+                    VALUES ($2, (SELECT ARRAY_AGG("userId") FROM collaborator_ids), $3, $4)
+                    RETURNING "boardId", "boardName"
             )
-            VALUES ($1, $2::INTEGER[], $3, $4)
-            RETURNING "boardId", "boardName";
-        `, [userId, boardCollaborators, boardName, isPublic]);
+            SELECT * FROM inserted_board;
+        `, [boardCollaborators, userId, boardName, isPublic]);
         if (rows.length > 0) {
-            res.status(201).send(rows[0]);
+            res.send(rows[0]);
         } else {
             res.status(500).send({
                 message: "Error creating board",
                 code: 500
+            });
+        }
+    }
+
+    @Delete('/remove/:boardId')
+    async deleteBoard(req: Request, res: Response<DeleteResponse>) {
+        const { boardId } = req.params;
+        // const userId = req.user.id;
+        const userId =3;
+        const { rows } = await DBPool.query(`
+            WITH authorized_user AS (
+                SELECT 1
+                FROM "Boards" b
+                WHERE b."boardId" = $1
+                  AND (b."userId" = $2 OR $2 = ANY(b."boardCollaborators"))
+                  AND b."isDeleted" = FALSE
+            )
+            , delete_tickets AS (
+                DELETE FROM "Tickets" t
+                USING "Lists" l
+                WHERE t."listId" = l."listId"
+                  AND l."boardId" = $1
+                  AND EXISTS (SELECT 1 FROM authorized_user)
+            )
+            , delete_lists AS (
+                DELETE FROM "Lists"
+                WHERE "boardId" = $1
+                  AND EXISTS (SELECT 1 FROM authorized_user)
+            )
+            DELETE FROM "Boards"
+            WHERE "boardId" = $1
+              AND EXISTS (SELECT 1 FROM authorized_user)
+            RETURNING "boardId";
+        `, [boardId, userId]);
+
+        if (rows.length > 0) {
+            res.send({ success: true, boardId: rows[0].boardId });
+        } else {
+            res.status(404).json({ success: false });
+        }
+    }
+
+    @Patch('/edit')
+    async editBoard(req: Request<EditBoardRequest>, res: Response<EditBoardResponse | ErrorResponse>) {
+        const { boardId, boardName, isPublic, boardCollaborators }: EditBoardRequest = req.body;
+        const userId = 3;
+        const { rows }: QueryResult<EditBoardResponse> = await DBPool.query(`
+            WITH authorized_user AS (
+                SELECT 1
+                FROM "Boards" b
+                WHERE b."boardId" = $1
+                  AND (b."userId" = $4 OR $4 = ANY(b."boardCollaborators"))
+                  AND b."isDeleted" = FALSE
+            ), new_collaborators AS (
+                SELECT ARRAY_AGG("userId") AS new_ids
+                FROM "Users"
+                WHERE "email" = ANY($5::TEXT[])
+                  AND "isDeleted" = FALSE
+            ), updated_board AS (
+                UPDATE "Boards"
+                    SET "boardName" = COALESCE($2, "boardName"),
+                        "isPublic" = COALESCE($3, "isPublic"),
+                        "boardCollaborators" = (
+                            SELECT ARRAY(SELECT DISTINCT UNNEST(
+                                                                 ARRAY_APPEND(
+                                                                         ARRAY_APPEND(
+                                                                                 ARRAY(SELECT UNNEST("boardCollaborators") FROM "Boards" WHERE "boardId" = $1),
+                                                                                 UNNEST((SELECT new_ids FROM new_collaborators))
+                                                                         ),
+                                                                         "userId"
+                                                                 )
+                                                         ))
+                        )
+                    WHERE "boardId" = $1
+                        AND EXISTS (SELECT 1 FROM authorized_user)
+                    RETURNING "boardId", "userId", "boardName", "isPublic", "boardCollaborators"
+            )
+            SELECT
+                ub."boardId",
+                ub."userId",
+                ub."boardName",
+                ub."isPublic",
+                json_agg(json_build_object(
+                        'userId', u."userId",
+                        'userProfilePicture', u."userProfilePicture",
+                        'email', u."email"
+                         )) AS "boardCollaborators"
+            FROM updated_board ub
+                     JOIN "Users" u ON u."userId" = ANY(ub."boardCollaborators")
+            GROUP BY ub."boardId", ub."userId", ub."boardName", ub."isPublic";
+        `, [boardId, boardName, isPublic, userId, boardCollaborators]);
+
+        if (rows.length > 0) {
+            const board = rows[0];
+            res.send(board);
+        } else {
+            res.status(404).send({
+                message: "board not found",
+                code: 404
             });
         }
     }
