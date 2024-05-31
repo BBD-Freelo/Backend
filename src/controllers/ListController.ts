@@ -7,6 +7,7 @@ import {AddListResponse} from "../interfaces/Responses/addList";
 import {QueryResult} from "pg";
 import {EditListRequest} from "../interfaces/Requests/editList";
 import {DeleteResponse} from "../interfaces/Responses/delete";
+import {PatchResponse} from "../interfaces/Responses/patch";
 
 @Controller('/list')
 export class ListController implements controller {
@@ -80,7 +81,7 @@ export class ListController implements controller {
     }
 
     @Patch('/')
-    async editList(req: Request<EditListRequest>, res: Response) {
+    async editList(req: Request<EditListRequest>, res: Response<PatchResponse>) {
         const { listId, listName }: EditListRequest = req.body;
         const userId = 3;  // Assuming userId is available in req.user
 
@@ -103,9 +104,12 @@ export class ListController implements controller {
 
         if (rows.length > 0) {
             const list = rows[0];
-            res.send(list);
+            res.send({
+                success: true,
+                listId: rows[0].listId
+            });
         } else {
-            res.status(404).send({ error: 'List not found' });
+            res.status(404).send({ success: false });
         }
     }
 }
