@@ -1,7 +1,7 @@
 import express from 'express';
 import { registerControllers } from './server';
 import { Logger } from './logging/logger';
-import { logRequest }  from "./MiddleWare";
+import { verifyToken, logRequest }  from "./MiddleWare";
 import {
   BoardController,
   HelloController,
@@ -19,7 +19,7 @@ app.use((req, res, next) => {
 });
 app.use(logRequest);
 const port = 3000;
-
+app.use(verifyToken);
 registerControllers(app, [
   BoardController,
   HelloController,
