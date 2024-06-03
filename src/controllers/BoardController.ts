@@ -8,8 +8,7 @@ import {AddBoardRequest} from "../interfaces/Requests/addBoard";
 import {EditBoardRequest} from "../interfaces/Requests/editBoard";
 import {DeleteResponse} from "../interfaces/Responses/delete";
 import {EditBoardResponse} from "../interfaces/Responses/editBoard.";
-import {getCognitoUser} from "../util/getUser";
-import {getUserDB} from "../util/getUserDB";
+import { getUserDB } from "../util/getUserDB";
 
 interface wrapper {
     board_data: Board
