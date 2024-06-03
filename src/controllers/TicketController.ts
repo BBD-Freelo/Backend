@@ -195,7 +195,7 @@ export class TicketController implements controller {
             ), assigned_user AS (
                 SELECT "userId"
                 FROM "Users"
-                WHERE "email" = $4
+                WHERE "userId" = $4
                   AND "isDeleted" = FALSE
             ), updated_ticket AS (
                 UPDATE "Tickets"
@@ -241,6 +241,5 @@ export class TicketController implements controller {
                 code: 404
             });
         }
-
     }
 }
