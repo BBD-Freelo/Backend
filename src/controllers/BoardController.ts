@@ -179,24 +179,23 @@ export class BoardController implements controller {
 
     @Patch('/edit')
     async editBoard(req: Request<EditBoardRequest>, res: Response<EditBoardResponse | ErrorResponse>) {
-        const { boardId, boardName, isPublic, boardCollaborators }: EditBoardRequest = req.body;
-        const userId = 3;
+        const { boardId, boardName, boardCollaborators }: EditBoardRequest = req.body;
+        const userId = await getUserDB(`${req.headers.authorization}`);
         const { rows }: QueryResult<EditBoardResponse> = await DBPool.query(`
             WITH authorized_user AS (
                 SELECT 1
                 FROM "Boards" b
                 WHERE b."boardId" = $1
-                  AND (b."userId" = $4 OR $4 = ANY(b."boardCollaborators"))
+                  AND (b."userId" = $3 OR $3 = ANY(b."boardCollaborators"))
                   AND b."isDeleted" = FALSE
             ), new_collaborators AS (
                 SELECT ARRAY_AGG("userId") AS new_ids
                 FROM "Users"
-                WHERE "email" = ANY($5::TEXT[])
+                WHERE "email" = ANY($4::TEXT[])
                   AND "isDeleted" = FALSE
             ), updated_board AS (
                 UPDATE "Boards"
                     SET "boardName" = COALESCE($2, "boardName"),
-                        "isPublic" = COALESCE($3, "isPublic"),
                         "boardCollaborators" = (
                             SELECT ARRAY(SELECT DISTINCT UNNEST(
                                                                  ARRAY_APPEND(
@@ -224,8 +223,8 @@ export class BoardController implements controller {
                          )) AS "boardCollaborators"
             FROM updated_board ub
                      JOIN "Users" u ON u."userId" = ANY(ub."boardCollaborators")
-            GROUP BY ub."boardId", ub."userId", ub."boardName", ub."isPublic";
-        `, [boardId, boardName, isPublic, userId, boardCollaborators]);
+            GROUP BY ub."boardId", ub."userId", ub."boardName", ub."isPublic";;
+        `, [boardId, boardName, userId, boardCollaborators]);
 
         if (rows.length > 0) {
             const board = rows[0];
