@@ -8,6 +8,8 @@ import {AddBoardRequest} from "../interfaces/Requests/addBoard";
 import {EditBoardRequest} from "../interfaces/Requests/editBoard";
 import {DeleteResponse} from "../interfaces/Responses/delete";
 import {EditBoardResponse} from "../interfaces/Responses/editBoard.";
+import {getCognitoUser} from "../util/getUser";
+import {getUserDB} from "../util/getUserDB";
 
 interface wrapper {
     board_data: Board
@@ -25,8 +27,7 @@ export class BoardController implements controller {
     @Get('/:boardId')
     async getBoardData(req: Request, res: Response<Board | ErrorResponse>) {
         const { boardId } = req.params;
-        // Grab this from the jwt in the header
-        const userId = 3;
+        const userId = await getUserDB(`${req.headers.authorization}`);
         const { rows }: QueryResult<wrapper> = await DBPool.query(`
             SELECT
                 CASE
@@ -95,7 +96,7 @@ export class BoardController implements controller {
 
     @Get('/')
     async userBoard(req:Request, res:Response<MyBoards[]>) {
-        const userId = 3;
+        const userId = await getUserDB(`${req.headers.authorization}`);
         const { rows }: QueryResult<MyBoards> = await DBPool.query(`
             SELECT
                 b."boardId",
@@ -112,7 +113,7 @@ export class BoardController implements controller {
 
     @Post('/new')
     async createBoard(req: Request<AddBoardRequest>, res: Response<MyBoards | ErrorResponse>) {
-        const userId = 3;
+        const userId = await getUserDB(`${req.headers.authorization}`);
         const { boardCollaborators, boardName, isPublic } = req.body;
 
         const { rows } = await DBPool.query(`
@@ -138,8 +139,7 @@ export class BoardController implements controller {
     @Delete('/remove/:boardId')
     async deleteBoard(req: Request, res: Response<DeleteResponse>) {
         const { boardId } = req.params;
-        // const userId = req.user.id;
-        const userId =3;
+        const userId = await getUserDB(`${req.headers.authorization}`);
         const { rows } = await DBPool.query(`
             WITH authorized_user AS (
                 SELECT 1

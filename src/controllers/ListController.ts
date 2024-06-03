@@ -8,6 +8,7 @@ import {QueryResult} from "pg";
 import {EditListRequest} from "../interfaces/Requests/editList";
 import {DeleteResponse} from "../interfaces/Responses/delete";
 import {PatchResponse} from "../interfaces/Responses/patch";
+import {getUserDB} from "../util/getUserDB";
 
 @Controller('/list')
 export class ListController implements controller {
@@ -20,7 +21,7 @@ export class ListController implements controller {
 
     @Post('/new')
     async addList(req: Request<AddListRequest>, res: Response<AddListResponse | ErrorResponse>) {
-        const userId = 3;
+        const userId = await getUserDB(`${req.headers.authorization}`);
         const { boardId, listName } =req.body;
         const { rows }: QueryResult<AddListResponse> = await DBPool.query(`
             WITH authorized_user AS (
@@ -51,7 +52,7 @@ export class ListController implements controller {
     @Delete('/:listId')
     async deleteList(req: Request, res: Response<DeleteResponse>) {
         const { listId } = req.params;
-        const userId = 3;
+        const userId = await getUserDB(`${req.headers.authorization}`);
         const { rows } = await DBPool.query(`
             WITH authorized_user AS (
                 SELECT 1
@@ -83,7 +84,7 @@ export class ListController implements controller {
     @Patch('/')
     async editList(req: Request<EditListRequest>, res: Response<PatchResponse>) {
         const { listId, listName }: EditListRequest = req.body;
-        const userId = 3;  // Assuming userId is available in req.user
+        const userId = await getUserDB(`${req.headers.authorization}`);  // Assuming userId is available in req.user
 
         const { rows } = await DBPool.query(`
             WITH authorized_user AS (

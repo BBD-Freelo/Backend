@@ -4,6 +4,7 @@ import {controller, EndpointDefenition, ErrorResponse} from '../interfaces';
 import { DBPool } from '../database';
 import {QueryResult} from "pg";
 import {User} from "../interfaces/entities/user";
+import {getUserDB} from "../util/getUserDB";
 
 interface wrapper {
     user_data: User[]
@@ -21,7 +22,7 @@ export class UserController implements controller {
     @Get('/collaborators/:boardId')
     async Collaborators(req: Request, res: Response<User[] | ErrorResponse>) {
         const { boardId } = req.params;
-        const userId = 3; // Grab this from the jwt in the header
+        const userId = await getUserDB(`${req.headers.authorization}`); // Grab this from the jwt in the header
         const { rows }: QueryResult<wrapper> = await DBPool.query(`
             WITH cte AS (
                 SELECT b."userId", b."boardCollaborators", b."isPublic"
@@ -63,6 +64,22 @@ export class UserController implements controller {
             return;
         }
         res.send(rows[0].user_data);
+    }
+
+    @Get('/id/:email')
+    async getUserByEmail(req: Request, res: Response) {
+        const { email } = req.params;
+        const { rows } = await DBPool.query(`
+            SELECT "userId" FROM "Users" WHERE "email" = $1
+        `, [email]);
+        if (rows.length > 0) {
+            res.send(rows[0]);
+        } else {
+            res.status(401).send({
+                message: "email not found",
+                code: 404
+            });
+        }
     }
 
 }
