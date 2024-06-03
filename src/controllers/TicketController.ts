@@ -10,6 +10,7 @@ import {AddTicketRequest} from "../interfaces/Requests/addTicket";
 import {EditTicketRequest} from "../interfaces/Requests/editTicket";
 import {DeleteResponse} from "../interfaces/Responses/delete";
 import {Ticket} from "../interfaces/entities/ticket";
+import {getUserDB} from "../util/getUserDB";
 
 @Controller('/ticket')
 export class TicketController implements controller {
@@ -22,7 +23,7 @@ export class TicketController implements controller {
 
     @Patch('/assign/user/:ticketId')
     async assignUser(req: Request<AssignTicketRequest>, res: Response<SuccesResponse| ErrorResponse>) {
-        const userId = 3;
+        const userId = await getUserDB(`${req.headers.authorization}`);
         const { ticketId } = req.params;
         const { assigneeId } = req.body;
         const { rows } = await DBPool.query(`
@@ -63,7 +64,7 @@ export class TicketController implements controller {
     @Patch('/move')
     async moveTicket(req: Request<MoveTicketRequest>, res: Response<SuccesResponse| ErrorResponse>) {
         const { moveToListId, ticketId } = req.body;
-        const userId = 3;
+        const userId = await getUserDB(`${req.headers.authorization}`);
         const { rows } = await DBPool.query(`
             WITH updated_tickets AS (
                 WITH cte AS (
@@ -116,7 +117,7 @@ export class TicketController implements controller {
 
     @Post('/add')
     async addTicket(req: Request<AddTicketRequest>, res: Response<AddTicketResponse | ErrorResponse>) {
-        const userId = 3;
+        const userId = await getUserDB(`${req.headers.authorization}`);
         const { listId, ticketName } = req.body;
         const { rows }: QueryResult<AddTicketResponse> = await DBPool.query(`
             WITH authorized_user AS (
@@ -148,7 +149,7 @@ export class TicketController implements controller {
     @Delete('/:ticketId')
     async deleteTicket(req: Request, res: Response<DeleteResponse>) {
         const { ticketId } = req.params;
-        const userId = 3;  // Assuming userId is available in req.user
+        const userId = await getUserDB(`${req.headers.authorization}`);  // Assuming userId is available in req.user
 
         const { rows } = await DBPool.query(`
             WITH authorized_user AS (
@@ -179,7 +180,7 @@ export class TicketController implements controller {
     @Patch('/')
     async editTicket(req: Request<EditTicketRequest>, res: Response<Ticket | ErrorResponse>) {
         const { ticketId, ticketName, ticketDescription, assignedUser, ticketDueDate }: EditTicketRequest = req.body;
-        const userId = 3;
+        const userId = await getUserDB(`${req.headers.authorization}`);
 
         const { rows } = await DBPool.query(`
             WITH authorized_user AS (
