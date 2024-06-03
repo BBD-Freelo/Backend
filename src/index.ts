@@ -18,7 +18,7 @@ app.use((req, res, next) => {
   next();
 });
 app.use(logRequest);
-// app.use(Auth);
+app.use(Auth);
 const port = 3000;
 
 registerControllers(app, [
