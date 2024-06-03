@@ -8,6 +8,7 @@ import {AddBoardRequest} from "../interfaces/Requests/addBoard";
 import {EditBoardRequest} from "../interfaces/Requests/editBoard";
 import {DeleteResponse} from "../interfaces/Responses/delete";
 import {EditBoardResponse} from "../interfaces/Responses/editBoard.";
+import {getCognitoUser} from "../util/getUser";
 
 interface wrapper {
     board_data: Board
@@ -27,6 +28,9 @@ export class BoardController implements controller {
         const { boardId } = req.params;
         // Grab this from the jwt in the header
         const userId = 3;
+        const val = req.headers.authorization as string;
+        const test = await getCognitoUser(val);
+        console.log(test);
         const { rows }: QueryResult<wrapper> = await DBPool.query(`
             SELECT
                 CASE
