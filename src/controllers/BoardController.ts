@@ -9,6 +9,7 @@ import {EditBoardRequest} from "../interfaces/Requests/editBoard";
 import {DeleteResponse} from "../interfaces/Responses/delete";
 import {EditBoardResponse} from "../interfaces/Responses/editBoard.";
 import { getUserDB } from "../util/getUserDB";
+import {User} from "../interfaces/entities/user";
 
 interface wrapper {
     board_data: Board
@@ -84,10 +85,10 @@ export class BoardController implements controller {
             WHERE b."boardId" = $1 AND b."isDeleted" = FALSE;
           `, [boardId, userId]);
         if(rows[0].board_data == null) {
-            res.status(404).send({
-                message: 'Board not found',
-                code: 404
-            });
+            res.send({
+                collaborators: [],
+                lists: []
+            })
             return;
         }
         res.send(rows[0].board_data);
@@ -107,6 +108,10 @@ export class BoardController implements controller {
                 b."userId" = $1 OR $1 = ANY(b."boardCollaborators")
                 AND b."isDeleted" = FALSE;
         `, [userId]);
+        if (rows.length === 0) {
+            res.send([]);
+            return;
+        }
         res.send(rows);
     }
 
