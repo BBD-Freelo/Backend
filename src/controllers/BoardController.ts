@@ -4,7 +4,7 @@ import {controller, EndpointDefenition, ErrorResponse} from '../interfaces';
 import { List } from "../interfaces/entities";
 import { DBPool } from '../database';
 import {QueryResult} from "pg";
-import { getUser } from '../util';
+import {getCognitoUser} from "../util/getUser";
 
 interface temp {
     board_data: List[]
@@ -28,7 +28,7 @@ export class BoardController implements controller {
         console.log(req.headers);
         const authorizationHeader = req.headers.authorization as string;
         console.log(authorizationHeader);
-        const user = getUser(authorizationHeader);
+        const user = await getCognitoUser(authorizationHeader);
         console.log(user);
         const userId = 3;
         const { rows }: QueryResult<temp> = await DBPool.query(`
