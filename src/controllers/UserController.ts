@@ -1,10 +1,11 @@
 import { Request, Response } from 'express';
 import { Controller, Get, Post } from "../decorators";
-import {controller, EndpointDefenition, ErrorResponse} from '../interfaces';
+import {controller, EndpointDefenition, ErrorResponse, SuccesResponse} from '../interfaces';
 import { DBPool } from '../database';
 import {QueryResult} from "pg";
 import {User} from "../interfaces/entities/user";
 import {getUserDB} from "../util/getUserDB";
+import {getCognitoUser} from "../util/getUser";
 
 interface wrapper {
     user_data: User[]
@@ -78,6 +79,22 @@ export class UserController implements controller {
             res.status(401).send({
                 message: "email not found",
                 code: 404
+            });
+        }
+    }
+
+    @Get('/is/authed')
+    async isAuthed(req: Request, res: Response<SuccesResponse>) {
+        try {
+            await getCognitoUser(`${req.headers.authorization}`);
+            res.send({
+                message: "Authorized",
+                code: 200
+            });
+        } catch (err) {
+            res.status(401).json({
+                message: "Unauthorized",
+                code: 401
             });
         }
     }
