@@ -20,7 +20,11 @@ app.use((req, res, next) => {
 app.use(logRequest);
 app.use(Auth);
 const port = 3000;
-
+app.get('/', (req, res) => {
+  res.status(200).send({
+    message: 'Hello, World!'
+  });
+})
 registerControllers(app, [
   BoardController,
   HelloController,
