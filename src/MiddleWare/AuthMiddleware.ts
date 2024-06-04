@@ -3,7 +3,7 @@ import {getCognitoUser} from "../util/getUser";
 
 export async function Auth(req: Request, res: Response, next: NextFunction) {
 
-    if (req.method== 'OPTIONS' || req.url === '/' || req.url === '/hello'){
+    if (req.method== 'OPTIONS' || req.url === '/' || req.url === '/hello' ){
         next();
         return;
     }
