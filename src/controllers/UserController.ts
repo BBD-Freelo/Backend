@@ -82,4 +82,20 @@ export class UserController implements controller {
         }
     }
 
+    @Get('/email/:userId')
+    async getEmailByUserId(req: Request, res: Response) {
+        const { userId } = req.params;
+        const { rows } = await DBPool.query(`
+            SELECT "email" FROM "Users" WHERE "userId" = $1
+        `, [userId]);
+        if (rows.length > 0) {
+            res.send(rows[0]);
+        } else {
+            res.status(401).send({
+                message: "userId not found",
+                code: 404
+            });
+        }
+    }
+
 }
