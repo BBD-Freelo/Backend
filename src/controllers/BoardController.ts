@@ -100,7 +100,8 @@ export class BoardController implements controller {
         const { rows }: QueryResult<MyBoards> = await DBPool.query(`
             SELECT
                 b."boardId",
-                b."boardName"
+                b."boardName",
+                b."boardCollaborators"
             FROM
                 "Boards" b
                     JOIN "Users" u ON b."userId" = u."userId"
