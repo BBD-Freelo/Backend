@@ -230,7 +230,7 @@ export class TicketController implements controller {
                     WHERE "ticketId" = $1
                         AND EXISTS (SELECT 1 FROM authorized_user)
                         AND EXISTS (SELECT 1 FROM assigned_user)
-                    RETURNING "ticketId", "userId", "listId", "ticketName", "ticketDescription", "ticketCreateDate", "ticketDueDate", "assignedUser"
+                    RETURNING "ticketId", "userId", "listId", "ticketName", "ticketDescription", "ticketCreateDate", "ticketDueDate", "ticketUpdateDate", "assignedUser"
             )
             SELECT
                 t."ticketId",
@@ -247,7 +247,8 @@ export class TicketController implements controller {
                 t."ticketName",
                 t."ticketDescription",
                 t."ticketCreateDate",
-                t."ticketDueDate"
+                t."ticketDueDate",
+                t."ticketUpdateDate"
             FROM updated_ticket t
                      JOIN "Users" u ON t."userId" = u."userId"
                      JOIN "Users" au ON t."assignedUser" = au."userId";

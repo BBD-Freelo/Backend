@@ -68,7 +68,8 @@ export class BoardController implements controller {
                                                                               'ticketName', t."ticketName",
                                                                               'ticketDescription', t."ticketDescription",
                                                                               'ticketCreateDate', t."ticketCreateDate",
-                                                                              'ticketDueDate', t."ticketDueDate"
+                                                                              'ticketDueDate', t."ticketDueDate",
+                                                                              'ticketUpdateDate', t."ticketUpdateDate"
                                                                       )
                                                                FROM "Tickets" t
                                                                         JOIN "Users" u ON t."userId" = u."userId"
@@ -208,7 +209,7 @@ export class BoardController implements controller {
         const { boardId, boardName, boardCollaborators }: EditBoardRequest = req.body;
         if(boardName === "" || boardName === undefined) {
             res.status(400).send({
-                message: "board name is cannot be empty",
+                message: "board name cannot be empty",
                 code: 400
             });
             return;
