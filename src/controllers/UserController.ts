@@ -1,10 +1,11 @@
 import { Request, Response } from 'express';
 import { Controller, Get, Post } from "../decorators";
-import {controller, EndpointDefenition, ErrorResponse} from '../interfaces';
+import {controller, EndpointDefenition, ErrorResponse, SuccesResponse} from '../interfaces';
 import { DBPool } from '../database';
 import {QueryResult} from "pg";
 import {User} from "../interfaces/entities/user";
 import {getUserDB} from "../util/getUserDB";
+import {getCognitoUser} from "../util/getUser";
 
 interface wrapper {
     user_data: User[]
@@ -81,6 +82,7 @@ export class UserController implements controller {
             });
         }
     }
+
 
     @Get('/email/:userId')
     async getEmailByUserId(req: Request, res: Response) {
