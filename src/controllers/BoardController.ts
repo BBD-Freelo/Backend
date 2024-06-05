@@ -101,10 +101,17 @@ export class BoardController implements controller {
             SELECT
                 b."boardId",
                 b."boardName",
-                b."boardCollaborators"
+                ARRAY(
+                        SELECT json_build_object(
+                                       'userId', u."userId",
+                                       'userProfilePicture', u."userProfilePicture",
+                                       'email', u."email"
+                               )
+                        FROM "Users" u
+                        WHERE u."userId" = ANY(b."boardCollaborators")
+                ) AS "boardCollaborators"
             FROM
                 "Boards" b
-                    JOIN "Users" u ON b."userId" = u."userId"
             WHERE
                 b."userId" = $1 OR $1 = ANY(b."boardCollaborators")
                 AND b."isDeleted" = FALSE;
