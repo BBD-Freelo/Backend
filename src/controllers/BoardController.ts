@@ -101,20 +101,22 @@ export class BoardController implements controller {
             SELECT
                 b."boardId",
                 b."boardName",
-                ARRAY(
-                        SELECT json_build_object(
-                                       'userId', u."userId",
-                                       'userProfilePicture', u."userProfilePicture",
-                                       'email', u."email"
-                               )
-                        FROM "Users" u
-                        WHERE u."userId" = ANY(b."boardCollaborators")
+                JSON_AGG(
+                        json_build_object(
+                                'userId', u."userId",
+                                'userProfilePicture', u."userProfilePicture",
+                                'email', u."email",
+                                'isOwner', CASE WHEN b."userId" = u."userId" THEN true ELSE false END
+                        )
                 ) AS "boardCollaborators"
             FROM
                 "Boards" b
+                    JOIN "Users" u ON u."userId" = ANY(b."boardCollaborators") OR b."userId" = u."userId"
             WHERE
                 b."userId" = $1 OR $1 = ANY(b."boardCollaborators")
-                AND b."isDeleted" = FALSE;
+                AND b."isDeleted" = FALSE
+            GROUP BY
+                b."boardId";
         `, [userId]);
         if (rows.length === 0) {
             res.send([]);
