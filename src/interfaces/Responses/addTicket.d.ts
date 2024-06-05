@@ -1,3 +1,5 @@
+import {User} from "../entities/user";
+
 export interface AddTicketResponse {
     ticketId: number;
     listId: number;
@@ -6,4 +8,6 @@ export interface AddTicketResponse {
     ticketCreateDate: string;
     ticketUpdateDate: string;
     ticketDueDate: string | null;
+    assignedUser: User,
+    user: User
 }

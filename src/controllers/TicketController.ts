@@ -119,22 +119,44 @@ export class TicketController implements controller {
     async addTicket(req: Request<AddTicketRequest>, res: Response<AddTicketResponse | ErrorResponse>) {
         const userId = await getUserDB(`${req.headers.authorization}`);
         const { listId, ticketName } = req.body;
+        if(ticketName === "" || ticketName === undefined) {
+            res.status(400).send({
+                message: "Ticket name is required",
+                code: 400
+            });
+            return;
+        }
         const { rows }: QueryResult<AddTicketResponse> = await DBPool.query(`
             WITH authorized_user AS (
                 SELECT 1
                 FROM "Boards" b
-                JOIN "Lists" l ON b."boardId" = l."boardId"
+                         JOIN "Lists" l ON b."boardId" = l."boardId"
                 WHERE l."listId" = $1
                   AND (b."userId" = $2 OR $2 = ANY(b."boardCollaborators"))
                   AND b."isDeleted" = FALSE
                   AND l."isDeleted" = FALSE
+            ), inserted_ticket AS (
+                INSERT INTO "Tickets" (
+                                       "userId", "listId", "ticketName", "ticketDescription", "ticketCreateDate", "assignedUser", "ticketUpdateDate"
+                    )
+                    SELECT $2, $1, $3, '', CURRENT_TIMESTAMP, $2, CURRENT_TIMESTAMP
+                    FROM authorized_user
+                    RETURNING "ticketId", "listId", "ticketName", "ticketDescription", "ticketCreateDate", "ticketUpdateDate", "ticketDueDate", "assignedUser", "userId"
             )
-            INSERT INTO "Tickets" (
-                "userId", "listId", "ticketName", "ticketDescription", "ticketCreateDate", "ticketUpdateDate"
-            )
-            SELECT $2, $1, $3, '', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP
-            FROM authorized_user
-            RETURNING "ticketId", "listId", "ticketName", "ticketDescription", "ticketCreateDate", "ticketUpdateDate", "ticketDueDate";
+            SELECT t."ticketId", t."listId", t."ticketName", t."ticketDescription", t."ticketCreateDate", t."ticketUpdateDate", t."ticketDueDate",
+                   json_build_object(
+                           'userId', au."userId",
+                           'userProfilePicture', au."userProfilePicture",
+                           'email', au."email"
+                   ) AS "assignedUser",
+                   json_build_object(
+                           'userId', ou."userId",
+                           'userProfilePicture', ou."userProfilePicture",
+                           'email', ou."email"
+                   ) AS "user"
+            FROM inserted_ticket t
+                     JOIN "Users" au ON t."assignedUser" = au."userId"
+                     JOIN "Users" ou ON t."userId" = ou."userId";
         `, [listId, userId, ticketName]);
         if (rows.length > 0) {
             res.send(rows[0]);
