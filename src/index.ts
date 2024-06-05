@@ -26,11 +26,15 @@ app.use(rateLimit({
   limit: 100,
   message: "You have exceeded your 100 requests per minute limit."
 }));
-
 app.use(logRequest);
-
 app.use(Auth);
 
+const port = 3000;
+app.get('/', (req, res) => {
+  res.status(200).send({
+    message: 'Hello, World!'
+  });
+})
 registerControllers(app, [
   BoardController,
   HelloController,

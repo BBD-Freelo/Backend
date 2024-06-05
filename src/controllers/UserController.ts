@@ -83,18 +83,19 @@ export class UserController implements controller {
         }
     }
 
-    @Get('/is/authed')
-    async isAuthed(req: Request, res: Response<SuccesResponse>) {
-        try {
-            await getCognitoUser(`${req.headers.authorization}`);
-            res.send({
-                message: "Authorized",
-                code: 200
-            });
-        } catch (err) {
-            res.status(401).json({
-                message: "Unauthorized",
-                code: 401
+
+    @Get('/email/:userId')
+    async getEmailByUserId(req: Request, res: Response) {
+        const { userId } = req.params;
+        const { rows } = await DBPool.query(`
+            SELECT "email" FROM "Users" WHERE "userId" = $1
+        `, [userId]);
+        if (rows.length > 0) {
+            res.send(rows[0]);
+        } else {
+            res.status(401).send({
+                message: "userId not found",
+                code: 404
             });
         }
     }

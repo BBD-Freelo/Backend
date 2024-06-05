@@ -2,7 +2,8 @@ import {NextFunction, Request, Response} from "express";
 import {getCognitoUser} from "../util/getUser";
 
 export async function Auth(req: Request, res: Response, next: NextFunction) {
-    if (req.method== 'OPTIONS'){
+
+    if (req.method== 'OPTIONS' || req.url === '/' || req.url === '/hello' ){
         next();
         return;
     }

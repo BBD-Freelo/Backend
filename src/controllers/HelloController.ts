@@ -14,7 +14,9 @@ export class HelloController implements controller {
 
   @Get('/')
   hello(req: Request, res: Response) {
-    res.send('Hello, World!');
+    res.status(200).send({
+      message: 'Hello, World!'
+    });
   }
 
   @Get('/user/:id')
