@@ -23,6 +23,13 @@ export class ListController implements controller {
     async addList(req: Request<AddListRequest>, res: Response<AddListResponse | ErrorResponse>) {
         const userId = await getUserDB(`${req.headers.authorization}`);
         const { boardId, listName } =req.body;
+        if(listName === "" || listName === undefined) {
+            res.status(400).send({
+                message: "list name is required",
+                code: 400
+            });
+            return;
+        }
         const { rows }: QueryResult<AddListResponse> = await DBPool.query(`
             WITH authorized_user AS (
                 SELECT 1
@@ -82,9 +89,16 @@ export class ListController implements controller {
     }
 
     @Patch('/')
-    async editList(req: Request<EditListRequest>, res: Response<PatchResponse>) {
+    async editList(req: Request<EditListRequest>, res: Response<PatchResponse | ErrorResponse>) {
         const { listId, listName }: EditListRequest = req.body;
         const userId = await getUserDB(`${req.headers.authorization}`);  // Assuming userId is available in req.user
+        if(listName === "" || listName === undefined) {
+            res.status(400).send({
+                message: "list name is required",
+                code: 400
+            });
+            return;
+        }
 
         const { rows } = await DBPool.query(`
             WITH authorized_user AS (

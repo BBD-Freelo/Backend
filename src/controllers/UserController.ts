@@ -19,7 +19,8 @@ export class UserController implements controller {
     static endpoint = '';
     static endpoints = {}
 
-    ///board/:boardId already does this but maybe we need this??
+    ///board/:boardId already does this, but maybe we need this??
+    // Turns out we do need this!
     @Get('/collaborators/:boardId')
     async Collaborators(req: Request, res: Response<User[] | ErrorResponse>) {
         const { boardId } = req.params;

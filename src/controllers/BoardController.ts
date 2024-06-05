@@ -68,7 +68,8 @@ export class BoardController implements controller {
                                                                               'ticketName', t."ticketName",
                                                                               'ticketDescription', t."ticketDescription",
                                                                               'ticketCreateDate', t."ticketCreateDate",
-                                                                              'ticketDueDate', t."ticketDueDate"
+                                                                              'ticketDueDate', t."ticketDueDate",
+                                                                              'ticketUpdateDate', t."ticketUpdateDate"
                                                                       )
                                                                FROM "Tickets" t
                                                                         JOIN "Users" u ON t."userId" = u."userId"
@@ -130,6 +131,22 @@ export class BoardController implements controller {
         const userId = await getUserDB(`${req.headers.authorization}`);
         const { boardCollaborators, boardName, isPublic } = req.body;
 
+        if(boardName === "" || boardName === undefined) {
+            res.status(400).send({
+                message: "board name is required",
+                code: 400
+            });
+            return;
+        }
+
+        if(boardCollaborators === undefined) {
+            res.status(400).send({
+                message: "error, undefined value for boardCollaborators",
+                code: 400
+            });
+            return;
+        }
+
         const { rows } = await DBPool.query(`
             WITH collaborator_ids AS (
                 SELECT "userId" FROM "Users" WHERE "email" = ANY($1::TEXT[])
@@ -139,7 +156,7 @@ export class BoardController implements controller {
                     RETURNING "boardId", "boardName"
             )
             SELECT * FROM inserted_board;
-        `, [boardCollaborators, userId, boardName, isPublic]);
+        `, [boardCollaborators, userId, boardName, isPublic === undefined ? false : isPublic]);
         if (rows.length > 0) {
             res.send(rows[0]);
         } else {
@@ -190,6 +207,13 @@ export class BoardController implements controller {
     @Patch('/edit')
     async editBoard(req: Request<EditBoardRequest>, res: Response<EditBoardResponse | ErrorResponse>) {
         const { boardId, boardName, boardCollaborators }: EditBoardRequest = req.body;
+        if(boardName === "" || boardName === undefined) {
+            res.status(400).send({
+                message: "board name cannot be empty",
+                code: 400
+            });
+            return;
+        }
         const userId = await getUserDB(`${req.headers.authorization}`);
         const { rows }: QueryResult<EditBoardResponse> = await DBPool.query(`
             WITH authorized_user AS (
